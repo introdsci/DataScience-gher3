@@ -1,0 +1,106 @@
+---
+title: "Discovery and Data Preparation"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Libraries needed to examine data
+
+```{r message=FALSE, warning=FALSE}
+library('tidyverse')
+library('tidyr')
+library('dplyr')
+library('ggplot2')
+```
+
+## Introduction
+
+The dataset I have chosen to investigate is the age-adjusted mortality rate of populations by race in the US. It holds the cause of death and the percentage that each population dies from it. My motivation for choosing this dataset is to look at which causes of death is the highest for each population and also the lowest.
+
+## Dataset
+
+Load in dataset to use.
+
+```{r}
+df <- read.csv('https://raw.githubusercontent.com/introdsci/DataScience-gher3/master/Population_Health_Measures__Age-Adjusted_Mortality_Rates.csv')
+```
+
+## Quality of Source (and possible Limitations)
+
+The source of the data is from, https://catalog.data.gov/dataset/population-health-measures-age-adjusted-mortality-rates-6a2e8. A limitation of this data is that it is not federal dataset, so this dataset would not be information of the US but instead it is data collect from Montgomery County of Maryland. Even though it doesn't have the whole picture, we may be able to use this data as a guideline to see the trends in mortality in the US. Also, the age adjustment methods Montgomery County used is consistent with US Center for Disease and Prevention and National Center for Health Statistics.
+
+## Variables
+
+```{r}
+head(df)
+```
+
+There are 9 variables used in the dataset: Unique.ID, X3.Year.Period, Cause.of.Death, Race, Hispanic.or.Latino..Origin, Gender, Age.Adjusted.Rate.per.100.000.Population, Lower.95..Confidence.Interval, and Upper.95..Confidence.Interval.
+
+* Unique.ID: identify each observation as a unique observation (no two observation is the same)
+* X3.Year.Period: the 3 year period in which data was collected from (i.e. 2010 - 2012)
+* Cause.of.Death: the disease or injuries that caused death
+* Race: considers the total or a single race of population (White, Black, etc.)
+* Hispanic.or.Latino..Origin: if population is of hispanic or latino origin
+* Gender: considers the total or a single sex of a population
+* Age.Adjusted.Rate.per.100.000.Population: the age-adjusted rate per 100,000 population
+* Lower.95..Confidence.Interval: lower bound of the 95% confidence interval
+* Upper.95..Confidence.Interval: uppper bound of the 95% confidence interval
+
+## Clean and Analyze Data
+
+Removing Age.Adjusted.Rate.per.100.000.Population from data since it will not contribute much right now. I made a tibble of the dataset in order to make the manipulation without affecting the original.
+
+```{r}
+mortality <- tibble(id = df$Unique.ID, year_period = df$X3.Year.Period, death = df$Cause.of.Death, race = df$Race, origin = df$Hispanic.or.Latino..Origin, gender = df$Gender, lower_ci = df$Lower.95..Confidence.Interval, upper_ci = df$Upper.95..Confidence.Interval)
+
+age_adjusted <- tibble(id = df$Unique.ID, adjusted = df$Age.Adjusted.Rate.per.100.000.Population)
+```
+
+In order to see what possible insights that can be made from the data, I plotted a graph of race vs. lower confidence interval of the number of deaths and another on the upper confidence interval. I filtered out any NA or incomplete data to get a better representation of what the results should be.
+
+```{r}
+filter(mortality, !is.na(lower_ci)) %>%
+  ggplot(aes(x=race, y = lower_ci)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
+
+filter(mortality, !is.na(upper_ci)) %>%
+  ggplot(aes(x=race, y=upper_ci)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle=45, hjust=1))
+```
+
+I also plotted a graph to see the number of deaths in each 3 year period that the data has been collected from. As usual, I filtered out the NA or incompleted data from the upper and lower confidence intervals.
+
+```{r}
+filter(mortality, !is.na(lower_ci)) %>%
+  ggplot(aes(x=year_period, y=lower_ci)) +
+  geom_boxplot()
+
+filter(mortality, !is.na(upper_ci)) %>%
+  ggplot(aes(x=year_period, y=upper_ci)) +
+  geom_boxplot()
+```
+
+I also plotted the graph with gender to see which gender has the highest death mortality rates.
+
+```{r}
+filter(mortality, !is.na(lower_ci)) %>%
+  ggplot(aes(x=gender, y=lower_ci)) +
+  geom_boxplot()
+
+filter(mortality, !is.na(upper_ci)) %>%
+  ggplot(aes(x=gender, y=upper_ci)) +
+  geom_boxplot()
+```
+
+From the plot listed above, it seems that Native American has the most death rates on average given the upper confidence interval. But an interesting observation I saw is that Blacks has the biggest outliers, and this could be because I didn't check for specific cause of death and instead I compare it to all causes of death.
+
+## Research Questions
+
+1. What is the main cause of death for each population and how can we reduce it?
+
+2. Are the cause of death similar between population and why is it the same or different?
+
